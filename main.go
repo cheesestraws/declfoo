@@ -27,7 +27,11 @@ func main() {
 		return
 	}	
 	
-	rom := DissectROM(bytes)
+	rom, err := DissectROM(bytes)
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+		return
+	}	
 	
 	rom.Dump()
 }
