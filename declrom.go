@@ -4,6 +4,7 @@ import "fmt"
 
 type ROM struct {
 	formatBlock *FormatBlock
+	sResourceDirectory *SResourceDirectory
 }
 
 func DissectROM(bs []byte) (*ROM, error) {
@@ -15,11 +16,16 @@ func DissectROM(bs []byte) (*ROM, error) {
 		return nil, err
 	}
 	
+	rom.sResourceDirectory, err = ExtractSResourceDirectory(bs, rom.formatBlock.directoryAddress)
+	if err != nil {
+		return nil, err
+	}
+	
 	return &rom, nil
 }
 
 func (r *ROM) PrettyString() string {
-	return "farts"
+	return r.sResourceDirectory.PrettyString()
 }
 
 func (r *ROM) Dump() {
