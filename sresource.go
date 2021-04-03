@@ -36,6 +36,37 @@ var fieldNames map[SResourceFieldID]string = map[SResourceFieldID]string{
 	38: "SecondaryInit",
 }
 
+var fieldTypes map[SResourceFieldID]string = map[SResourceFieldID]string{
+	// General fields
+
+	1: "ignore",
+	2: "cString",
+	3: "ignore",
+	4: "ignore",
+	5: "ignore",
+	6: "ignore",
+	7: "ignore",
+	8: "ignore",
+	10: "ignore",
+	11: "ignore",
+	12: "ignore",
+	13: "ignore",
+	15: "ignore",
+	16: "ignore",
+	17: "ignore",
+	108: "ignore",
+	
+	// Board sResource fields
+	
+	32: "ignore",
+	33: "ignore",
+	34: "SExecBlock",
+	35: "ignore",
+	36: "ignore",
+	38: "SExecBlock",
+}
+
+
 func (f SResourceFieldID) PrettyString() string {
 	if _, ok := fieldNames[f]; ok {
 		return fieldNames[f]
@@ -51,11 +82,13 @@ type SResource struct {
 	fields []SResourceFieldID
 	fieldEntryLoc  map[SResourceFieldID]uint32
 	fieldData map[SResourceFieldID]uint32
+	decodedData map[SResourceFieldID]SRDatum
 }
 
 func (s *SResource) populate(from []byte) {
 	s.fieldEntryLoc = make(map[SResourceFieldID]uint32)
 	s.fieldData = make(map[SResourceFieldID]uint32)
+	s.decodedData = make(map[SResourceFieldID]SRDatum)
 
 	entryOffset := s.Offset
 	
@@ -73,15 +106,34 @@ func (s *SResource) populate(from []byte) {
 		s.fields = append(s.fields, fieldID)
 		s.fieldData[fieldID] = data
 		s.fieldEntryLoc[fieldID] = entryOffset		
+		s.decodedData[fieldID] = decodesrResourceField(fieldID, from, entryOffset, data)
 		
 		entryOffset += 4
 	}
+}
+
+func decodesrResourceField(fid SResourceFieldID, from []byte, entryLoc uint32, offset uint32) SRDatum {
+	// find the field type
+	ft, ok := fieldTypes[fid]
+	if !ok {
+		ft = "ignore"
+	}
+
+	// find the function to decode that
+	fn := srdConstructors[ft]
+	
+	// do the decoding
+	return fn(from, entryLoc, offset)
 }
 
 func (s SResource) PrettyString() string {
 	var str string
 	for _, fid := range s.fields {
 		str += fmt.Sprintf("  %s => 0x%06x\n", fid.PrettyString(), s.fieldData[fid]);
+		fldstr := s.decodedData[fid].PrettyString()
+		if fldstr != "" {
+			str += fldstr + "\n"
+		}
 	}
 	
 	return str
